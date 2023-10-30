@@ -3,7 +3,7 @@
 Suivez ces étapes pour installer et lancer le module :
 
 ## 1. Configuration du script
-Modifiez la valeur de `LINUX_PATH` dans `script.sh` :
+Modifiez la valeur de `LINUX_PATH` dans `script.sh` et dans les Makefile des modules:
 ```bash
 LINUX_PATH=../linux-5.15.137
 ```
