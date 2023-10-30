@@ -28,7 +28,7 @@ rm -r temp_dir/
 sudo mkdir -p ./my-rootfs/boot/grub
 sudo cp $LINUX_PATH/arch/x86/boot/bzImage ./my-rootfs/boot/vmlinuz
 sudo mkdir ./my-rootfs/lib/modules
-sudo find ../module -name "*.ko" -exec cp \{} ./my-rootfs/lib/modules/ \;
+sudo find ../modules -name "*.ko" -exec cp \{} ./my-rootfs/lib/modules/ \;
 sudo cp grub.cfg ./my-rootfs/boot/grub/grub.cfg
 sudo grub-install --directory=/usr/lib/grub/i386-pc --boot-directory=./my-rootfs/boot /dev/loop0
 
