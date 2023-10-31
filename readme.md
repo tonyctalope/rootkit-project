@@ -43,4 +43,5 @@ Remplacez `[nom_du_module]` par le nom réel de votre module.
 
 # Fonctionnalités
 
--  Cache n'importe quel fichier/dossier qui contient "hacking2600Module" (getdents64)
+- Cache n'importe quel fichier/dossier qui contient "hacking2600Module" (getdents64)
+- Peut donner les permissions root avec la commande `kill -64 1`
