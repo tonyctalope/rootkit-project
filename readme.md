@@ -40,3 +40,7 @@ cd /lib/modules && insmod [nom_du_module]
 ```
 
 Remplacez `[nom_du_module]` par le nom réel de votre module.
+
+# Fonctionnalités
+
+-  Cache n'importe quel fichier/dossier qui contient "hacking2600Module" (getdents64)
