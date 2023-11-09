@@ -46,3 +46,4 @@ Remplacez `[nom_du_module]` par le nom réel de votre module.
 - Cache n'importe quel fichier/dossier qui contient "hacking2600Module" (getdents64)
 - Cache le module des lsmod ou /proc/modules
 - Peut donner les permissions root avec la commande `kill -64 1`
+- persistence avec init.d
