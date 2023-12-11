@@ -4,7 +4,7 @@ import socket
 def start_server():
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # Socket TCP/IP
 
-    server_address = ("192.168.21.253", 7777)
+    server_address = ("127.0.0.1", 7777)
     server_socket.bind(server_address)
 
     server_socket.listen(1)
