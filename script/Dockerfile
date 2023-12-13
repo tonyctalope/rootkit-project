@@ -8,6 +8,8 @@ RUN rc-update add agetty.ttyS0 default && \
     rc-update add root default
 
 RUN echo -e "root\nroot" | passwd root
+RUN adduser -D test && \
+    echo "test:test" | chpasswd
 
 RUN rc-update add devfs boot && \
     rc-update add procfs boot && \

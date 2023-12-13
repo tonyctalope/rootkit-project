@@ -10,6 +10,9 @@ Ce document présente le développement d'un RootKit basique destiné aux systè
 
 ## Emulation d'une VM Linux
 Pour lancer l'émulation, exécutez `script.sh`. Ce script configure et démarre une machine virtuelle Linux pour le test du RootKit.
+Deux utilisateurs sont prévus pour l'exécution de test : 
+- Un utilisateur admin (root:root)
+- Un utilisateur (test:test)
 
 ## Installation du RootKit
 Dans la VM, exécutez `loadModule.sh` pour installer le module du RootKit.
